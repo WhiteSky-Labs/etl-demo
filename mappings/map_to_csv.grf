@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?><Graph __version="3.5.0" author="agigante" created="Wed Apr 01 09:49:36 AEDT 2015" description="Map To CSV" guiVersion="3.4.4.P" id="1427931808113" licenseCode="Unlicensed" licenseType="Unknown" modified="Wed Apr 01 09:49:36 AEDT 2015" modifiedBy="agigante" name="Map_To_CSV" revision="1.0" showComponentDetails="false">
+<Global>
+<Metadata __referenceCounter="1" _dataStructure="SINGLE_DIMENSIONAL_COLLECTION" _type="Output" id="e91cf115-1478-4eca-8ceb-2c166c739bb8">
+<Record fieldDelimiter="," name="csv" recordDelimiter="\n\\|\r\n\\|\r" type="delimited">
+<Field containerType="SINGLE" label="field_0" name="field_0" size="10" type="string"/>
+<Field containerType="SINGLE" label="field_1" name="field_1" size="10" type="string"/>
+<Field containerType="SINGLE" label="field_2" name="field_2" size="10" type="string"/>
+<Field containerType="SINGLE" label="field_3" name="field_3" size="10" type="string"/>
+<Field containerType="SINGLE" label="field_4" name="field_4" size="10" type="string"/>
+<Field containerType="SINGLE" label="field_5" name="field_5" size="10" type="string"/>
+<Field containerType="SINGLE" eofAsDelimiter="true" label="field_6" name="field_6" size="10" type="string"/>
+<Field __artificialType="_id" name="__id" type="long"/>
+</Record>
+</Metadata>
+<Metadata __index="0" __referenceCounter="1" __sourcePath="{}/Map" _dataStructure="OBJECT" _id="__id" _type="Input" id="1ef12d21-cbe6-46ef-a0ad-16928c5e4b20">
+<Record fieldDelimiter="," name="Map" recordDelimiter="\n\\|\r\n\\|\r" type="delimited">
+<Field __artificialType="_id" __systemManaged="true" name="__id" type="string"/>
+<Field __implementationClass="java.lang.Integer" __index="0" __sourcePath="{}/Map/amount" containerType="SINGLE" label="amount" name="amount" type="integer"/>
+<Field __implementationClass="java.lang.String" __index="1" __sourcePath="{}/Map/first_x005fname" containerType="SINGLE" label="first_name" name="first_name" type="string"/>
+<Field __implementationClass="java.lang.String" __index="2" __sourcePath="{}/Map/trx_x005fcode" containerType="SINGLE" label="trx_code" name="trx_code" type="string"/>
+<Field __implementationClass="java.lang.Integer" __index="3" __sourcePath="{}/Map/trx_x005fid" containerType="SINGLE" label="trx_id" name="trx_id" type="integer"/>
+<Field __implementationClass="java.lang.String" __index="4" __sourcePath="{}/Map/email" containerType="SINGLE" label="email" name="email" type="string"/>
+<Field __implementationClass="java.lang.String" __index="5" __sourcePath="{}/Map/last_x005fname" containerType="SINGLE" label="last_name" name="last_name" type="string"/>
+<Field __implementationClass="java.lang.String" __index="6" __sourcePath="{}/Map/member_x005fid" containerType="SINGLE" label="member_id" name="member_id" type="string"/>
+</Record>
+</Metadata>
+<Dictionary>
+<Entry id="DictionaryEntry0" input="true" name="inputPayload" output="false" type="object"/>
+<Entry id="DictionaryEntry1" input="false" name="outputPayload" output="true" type="object"/>
+</Dictionary>
+</Global>
+<Phase number="0">
+<Node enabled="enabled" fileURL="dict:inputPayload" guiName="Map&lt;k,v&gt; READER" guiX="20" guiY="20" id="BEAN_READER0" type="BEAN_READER">
+<attr name="mapping"><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Context outPort="0" sequenceField="__id" xpath=".">
+  <Mapping cloverField="amount" trim="true" xpath="amount"/>
+  <Mapping cloverField="first_name" trim="true" xpath="first_x005fname"/>
+  <Mapping cloverField="trx_code" trim="true" xpath="trx_x005fcode"/>
+  <Mapping cloverField="trx_id" trim="true" xpath="trx_x005fid"/>
+  <Mapping cloverField="email" trim="true" xpath="email"/>
+  <Mapping cloverField="last_name" trim="true" xpath="last_x005fname"/>
+  <Mapping cloverField="member_id" trim="true" xpath="member_x005fid"/>
+</Context>
+]]></attr>
+<attr name="_data_format"><![CDATA[MAP]]></attr>
+<attr name="__metadata"><![CDATA[true]]></attr>
+</Node>
+<Node charset="UTF-8" enabled="enabled" excludeFields="__id" fileURL="dict:outputPayload" guiName="CSV WRITER" guiX="900" guiY="20" id="DATA_WRITER0" quotedStrings="true" type="DATA_WRITER">
+<attr name="_data_format"><![CDATA[CSV]]></attr>
+</Node>
+<Node enabled="enabled" guiName="Foreach 'Map' -&gt; 'csv'" guiX="460" guiY="20" id="FOREACH_MAP_CSV" transformClass="com.mulesoft.datamapper.transform.MelRecordTransform" type="REFORMAT">
+<attr name="melScript"><![CDATA[//MEL
+//START -> DO NOT REMOVE
+output.__id = str2long(input.__id);
+//END -> DO NOT REMOVE
+output.field_0 = num2str(input.amount);
+output.field_1 = input.first_name;
+output.field_2 = input.trx_code;
+output.field_3 = num2str(input.trx_id);
+output.field_4 = input.email;
+output.field_5 = input.last_name;
+output.field_6 = input.member_id;]]></attr>
+</Node>
+<Edge debugMode="true" fromNode="BEAN_READER0:0" guiBendpoints="" id="Edge0" inPort="Port 0 (in)" metadata="1ef12d21-cbe6-46ef-a0ad-16928c5e4b20" outPort="Port 0 (out)" toNode="FOREACH_MAP_CSV:0"/>
+<Edge debugMode="true" fromNode="FOREACH_MAP_CSV:0" guiBendpoints="" id="Edge1" inPort="Port 0 (in)" metadata="e91cf115-1478-4eca-8ceb-2c166c739bb8" outPort="Port 0 (out)" toNode="DATA_WRITER0:0"/>
+</Phase>
+</Graph>

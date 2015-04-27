@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:smtp="http://www.mulesoft.org/schema/mule/smtp" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.6.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd
+http://www.mulesoft.org/schema/mule/smtp http://www.mulesoft.org/schema/mule/smtp/current/mule-smtp.xsd">
+    <file:connector name="File2" autoDelete="true" outputAppend="true" streaming="true" validateConnections="true" doc:name="File"/>
+    <data-mapper:config name="Map_To_CSV" transformationGraphPath="map_to_csv.grf" doc:name="Map_To_CSV"/>
+    <batch:job name="ExtractFileLoadDB">
+        <batch:input>
+            <poll doc:name="Poll">
+                <fixed-frequency-scheduler frequency="1" timeUnit="MINUTES"/>
+                <db:select config-ref="MySQL_Configuration" doc:name="Extract transactions">
+                    <db:parameterized-query><![CDATA[select transaction.transaction_id trx_id, transaction.code trx_code, transaction.amount amount, member.member_id member_id, member.first_name first_name, member.last_name last_name, member.`email`
+from member
+join transaction on member.member_id = transaction.`member_id`;]]></db:parameterized-query>
+                </db:select>
+            </poll>
+        </batch:input>
+        <batch:process-records>
+            <batch:step name="Batch_Step">
+                <expression-filter expression="#[payload.email.contains(&quot;co.uk&quot;)]" doc:name="FIlter all except co.uk emails"/>
+                <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+                <data-mapper:transform config-ref="Map_To_CSV" doc:name="Transform to CSV"/>
+                <file:outbound-endpoint path="outbox" outputPattern="load.csv" connector-ref="File2" responseTimeout="10000" doc:name="Load File"/>
+            </batch:step>
+        </batch:process-records>
+        <batch:on-complete>
+            <logger message="Extraction complete" level="INFO" doc:name="Logger"/>
+        </batch:on-complete>
+    </batch:job>
+    <catch-exception-strategy name="ExceptionFlowDB">
+        <logger level="INFO" doc:name="Log ERROR"/>
+        <smtp:outbound-endpoint host="localhost" to="admin@whiteskylabs.com" from="mulesoft@whiteskylabs.com" subject="Error processing loyalty file #[message.inboundProperties.originalFilename]" responseTimeout="10000" doc:name="Send email to admin"/>
+    </catch-exception-strategy>
+</mule>

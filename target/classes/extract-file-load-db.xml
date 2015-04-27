@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:smtp="http://www.mulesoft.org/schema/mule/smtp" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.6.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd
+http://www.mulesoft.org/schema/mule/smtp http://www.mulesoft.org/schema/mule/smtp/current/mule-smtp.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <db:mysql-config name="MySQL_Configuration" host="localhost" port="3306" user="mulesoft" password="mulesoft" database="mulesoft" doc:name="MySQL Configuration"/>
+    <file:connector name="File" autoDelete="false" streaming="true" validateConnections="true" doc:name="File"/>
+    <data-mapper:config name="CSV_to_reward" transformationGraphPath="csv_to_reward.grf" doc:name="CSV_to_reward"/>
+    <batch:job name="ExtractDbLoadFile">
+        <batch:input>
+            <file:inbound-endpoint path="inbox" responseTimeout="10000" doc:name="Extract File" connector-ref="File" moveToDirectory="outbox"/>
+            <data-mapper:transform config-ref="CSV_to_reward" doc:name="CSV to loyalty"/>
+        </batch:input>
+        <batch:process-records>
+            <batch:step name="Batch_Step">
+                <logger message="Processing ID: #[payload.reward_id] ..." level="INFO" doc:name="Logger"/>
+                <batch:set-record-variable variableName="loyaltyToAud" value="#[payload.points*5]" doc:name="Apply Loyalty Business Rule"/>
+                <logger message="#[payload.points] loyalty points converted to AUD #[recordVars['loyaltyToAud']]" level="INFO" doc:name="Logger"/>
+                <db:insert config-ref="MySQL_Configuration" doc:name="INSERT transaction">
+                    <db:parameterized-query><![CDATA[insert into transaction (code,member_id,amount) values (110,#[payload.member_id],#[recordVars['loyaltyToAud']]);]]></db:parameterized-query>
+                </db:insert>
+            </batch:step>
+        </batch:process-records>
+        <batch:on-complete>
+            <logger message="Processing completed." level="INFO" doc:name="Logger"/>
+        </batch:on-complete>
+    </batch:job>
+    <catch-exception-strategy name="ExceptionFlowFile">
+        <logger message="Error processing file #[message.inboundProperties.originalFilename]" level="ERROR" doc:name="Log ERROR"/>
+        <smtp:outbound-endpoint host="localhost" responseTimeout="10000" doc:name="Send email to admin" from="mulesoft@whiteskylabs.com" subject="Error processing loyalty file #[message.inboundProperties.originalFilename]" to="admin@whiteskylabs.com"/>
+    </catch-exception-strategy>
+</mule>
